@@ -54,8 +54,15 @@ def load_data():
         return None
 
 def create_line_plot(df, countries, variable, title):
-    """Create an interactive line plot."""
-    fig = px.line(
+    """Create an interactive bar plot."""
+    # Create a custom hover template that includes exercise information if available
+    hover_template = (
+        "<b>%{x}</b><br>" +
+        "%{y:.2f}%<br>" +
+        "<b>%{fullData.name}</b>"
+    )
+    
+    fig = px.bar(
         df[df['Country'].isin(countries)],
         x='year',
         y=variable,
@@ -65,8 +72,19 @@ def create_line_plot(df, countries, variable, title):
             'year': 'Ano',
             variable: 'Valor (%)',
             'Country': 'País/Agregado'
-        }
+        },
+        custom_data=['exercise'] if 'exercise' in df.columns else None,
+        barmode='group'  # Agrupa as barras por ano
     )
+    
+    # Update hover template if exercise data is available
+    if 'exercise' in df.columns:
+        hover_template += "<br>Exercício: %{customdata[0]}"
+    
+    fig.update_traces(
+        hovertemplate=hover_template
+    )
+    
     fig.update_layout(
         hovermode='x unified',
         showlegend=True,
@@ -76,7 +94,20 @@ def create_line_plot(df, countries, variable, title):
             y=1.02,
             xanchor="right",
             x=1
-        )
+        ),
+        xaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='LightGrey',
+            tickangle=-45  # Rotaciona os labels do eixo X para melhor legibilidade
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridwidth=1,
+            gridcolor='LightGrey'
+        ),
+        bargap=0.15,  # Espaço entre grupos de barras
+        bargroupgap=0.1  # Espaço entre barras do mesmo grupo
     )
     return fig
 
@@ -203,6 +234,19 @@ def main():
         "Selecione a variável",
         options=list(variables.keys())
     )
+
+    # Exercise selection
+    exercise_options = {
+        '1° Semestre': 1,
+        '2° Semestre': 2,
+        'Média': 'mean'
+    }
+    selected_exercise = st.sidebar.selectbox(
+        "Selecione o exercício da previsão",
+        options=list(exercise_options.keys()),
+        index=1,  # Default to 2° Semestre
+        help="1° Semestre: previsões de abril | 2° Semestre: previsões de outubro | Média: média das previsões dos dois semestres"
+    )
     
     # Apply filters
     filtered_df = df[
@@ -215,6 +259,15 @@ def main():
     
     if selected_income != 'Todos':
         filtered_df = filtered_df[filtered_df['incomegroup'] == selected_income]
+
+    # Handle exercise selection
+    if selected_exercise != 'Média':
+        filtered_df = filtered_df[filtered_df['exercise'] == exercise_options[selected_exercise]]
+        exercise_title = f" - Previsões do {selected_exercise}"
+    else:
+        # Calculate mean for each country and year
+        filtered_df = filtered_df.groupby(['Country', 'year'])[variables[selected_variable]].mean().reset_index()
+        exercise_title = " - Média das Previsões"
     
     # Main content
     st.title("Painel de Previsões Macroeconômicas do FMI")
@@ -231,7 +284,7 @@ def main():
         filtered_df,
         countries,
         variables[selected_variable],
-        f"Evolução de {selected_variable} ao longo do tempo"
+        f"Evolução de {selected_variable}{exercise_title}"
     )
     st.plotly_chart(fig_line, use_container_width=True)
     
