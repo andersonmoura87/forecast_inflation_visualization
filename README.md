@@ -126,4 +126,4 @@ Email: mateusramalho88@gmail.com
 Anderson de Castro Moura
 LinkedIn: linkedin.com/in/andersondecastromoura
 Email: andersoncastromoura@gmail.com
-Link do Projeto: github.com/andersoncastro-moura/forecast_inflation
+Link do Projeto: github.com/andersoncastro-moura/forecast_inflation   
